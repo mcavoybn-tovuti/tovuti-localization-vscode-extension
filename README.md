@@ -16,12 +16,8 @@ hard-coded verbiage in Tovuti's templates and views with localized text.
 
 ## Known Issues
 
-There are no issues and there never will be, this software is perfect.
+There are no issues and there never will be, this software is perfect!
 
 ## Release Notes
 
-<!-- Users appreciate release notes as you update your extension. -->
-
-### 0.1.0
-
-* Initial release. Variables can be replaced with a single command.
+See CHANGELOG.md for release notes. (This project is small, we don't really need to separate release notes and changelog... yet)
