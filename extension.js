@@ -22,10 +22,8 @@ function activate(context) {
 	const currentWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri.path.slice(1);
 	if (currentWorkspace) {
 		console.log('workspace found: ' + currentWorkspace);
-		localizationTable = tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/en-GB/", false, localizationTable)
-		console.log(localizationTable);
-		localizationTable = tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/", false, localizationTable);
-		console.log(localizationTable);
+		 tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/en-GB/", false, localizationTable)
+		 tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/", false, localizationTable);
 	} else {
 		console.log("tovutilocalizaton failed to activate, root folder not found");
 		return;
@@ -49,9 +47,7 @@ function activate(context) {
 			vscode.window.showInformationMessage(highlight);
 
 			// Check localizationTable for an existing variable
-			console.log(localizationTable);
 			let searchResults = tovutilocalization.localizationTable[highlight];
-			console.log(tovutilocalization.localizationTable['Zambia'])
 			if (searchResults.length > 0) {
 				// create a dropdown selection of each variable to be replaced
 				// once the variable is selected, it will replace the current selection

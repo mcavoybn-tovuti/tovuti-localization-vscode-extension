@@ -1,6 +1,8 @@
 // node dependencies
 var fs = require('fs');
 
+
+let localizationTable = {};
 /**
  * Traverses the given directory and looking for .ini files.
  * If an .ini file is found, it is opened and the localization variables inside
@@ -18,9 +20,8 @@ var fs = require('fs');
  * 
  * @param {string} directory the directory to traverse
  * 
- * @returns {object} table
  */
-function initializeLocalizationTable(directory, removeExisting = false, table) {
+function initializeLocalizationTable(directory, removeExisting = false) {
     console.log('starting traversal from directory : ' + directory);
     if (!fs.existsSync(directory)) {
         console.log("file not found, exiting: " + directory);
@@ -55,10 +56,10 @@ function initializeLocalizationTable(directory, removeExisting = false, table) {
         ) {
 
             if (removeExisting) {
-                // remove each entry in the table taken from 
+                // remove each entry in the localizationTable taken from 
                 // this file
-                Object.keys(table).forEach(key  => {
-                    table[key] = table[key].filter(entry => {
+                Object.keys(localizationTable).forEach(key  => {
+                    localizationTable[key] = localizationTable[key].filter(entry => {
                         return entry.path != fileOrDirectory;
                     })
                 })
@@ -82,46 +83,47 @@ function initializeLocalizationTable(directory, removeExisting = false, table) {
                         const value = variable.split('=')[1].replaceAll('"', '').trim();
                         const path = completeFilepath;
                         
-                        if (!table[value]) {
-                            table[value] = [];
+                        if (!localizationTable[value]) {
+                            localizationTable[value] = [];
                         }
-                        table[value].push({key, path});
+                        localizationTable[value].push({key, path});
                     }
                 })
             });
 
             // console.log('returning...');
-            // console.log(table);
-            return table;
+            // console.log(localizationTable);
+            return;
 
             // Put a watch on the file so that the localizationTable
             // so localizationTable is updated if a new variable is added
             // fs.watch(fileOrDirectory, (event, filename) => {
             //     if (filename) {
             //         console.log(`${CONSOLE_PREFIX}: ${filename} file changed, updating localizationTable`);
-            //         initializeLocalizationTable(fileOrDirectory, true, table);
+            //         initializeLocalizationTable(fileOrDirectory, true, localizationTable);
             //     }
             // });
             
         } else if (filepathArray.length == 1) {
             // potentialFontFile isn't a file, its a directory
             // recurse into that directory
-            let subTable = initializeLocalizationTable(completeFilepath + '/', false, table);
-            let combineObjects = (object1, object2) => {
-                if (!object2) {
-                    return object1;
-                }
-                Object.keys(object2).forEach(key => {
-                    if (!object1[key]) {
-                        object1[key] = [];
-                    }
-                    object1[key].push(object2[key]);
-                });
-                return object1;
-            }
-            console.log('combining stuff and returning');
-            console.log(combineObjects(table, subTable));
-            return combineObjects(table, subTable);
+            // let subTable = initializeLocalizationTable(completeFilepath + '/', false, localizationTable);
+            // let combineObjects = (object1, object2) => {
+            //     if (!object2) {
+            //         return object1;
+            //     }
+            //     Object.keys(object2).forEach(key => {
+            //         if (!object1[key]) {
+            //             object1[key] = [];
+            //         }
+            //         object1[key].push(object2[key]);
+            //     });
+            //     return object1;
+            // }
+            // console.log('combining stuff and returning');
+            // console.log(combineObjects(localizationTable, subTable));
+            // return combineObjects(localizationTable, subTable);
+            return initializeLocalizationTable(completeFilepath + '/', false);
         }
     });
 }
@@ -139,6 +141,7 @@ function createLocalizationVariable(key, value, filepath) {
 }
 
 module.exports = {
+    localizationTable,
     initializeLocalizationTable,
     createLocalizationVariable
 }
