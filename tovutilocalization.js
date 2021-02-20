@@ -101,7 +101,6 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
                         const localizationKey = line.split('=')[0].trim();
 
                         // @TODO get rid of this annoying warning suppression
-                        // @ts-ignore
                         // The value of the localization variable with the given key, e.g. "Pay"
                         const value = line.split('=')[1].replaceAll('"', '').trim();
                         
@@ -120,12 +119,14 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
 
             // @TODO Put a watch on the file so the localizationTable
             // is updated if a variable is added or removed
-            // fs.watch(fileOrDirectory, (event, filename) => {
-            //     if (filename) {
-            //         console.log(`${filename} file changed, updating localizationTable`);
-            //         initializeLocalizationTable(directory, true);
-            //     }
-            // });
+            fs.watch(completeFilepath, (event, filename) => {
+                // console.log(event);
+                // console.log(filename);
+                if (filename) {
+                    console.log(`${filename} changed, updating localizationTable`);
+                    initializeLocalizationTable(completeFilepath, true);
+                }
+            });
             
             return;
         } else if (filepathArray.length == 1) {
@@ -137,14 +138,20 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
 
 function createLocalizationVariable(key, value, filepath) {
     // Write a new localization variable to the file at filepath
-    fs.readFile(filepath, 'utf8', function(err, data) {
-        if (err) {
-            throw err;
-        }
-        console.log('file opened');
-        console.log(data);
+    const newVariableText = `${key.toUpperCase()} = "${value}"\n`;
+    if (!localizationTable[value]) {
+        localizationTable[value] = [];
+    }
+    localizationTable[value].push({
+        key,
+        path: filepath
     });
-    return false;
+    fs.appendFile(filepath, newVariableText, function(err, data) {
+        if (err) {
+            console.log('error writing to file:' + filepath);
+            console.log(err);
+        }
+    });
 }
 
 module.exports = {
