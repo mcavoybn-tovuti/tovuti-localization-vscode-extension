@@ -66,9 +66,27 @@ async function activate(context) {
                 // Currently open file is in the administrator section
                 siteOrAdministrator = 'administrator';
             }
+            let subsetId = null;
+            let currentFileFilepathArray = currentFileFilepath.split("/");
+            for (let i = 0; i < currentFileFilepathArray.length; i++) {
+                let fileOrDir = currentFileFilepathArray[i];
+                if (fileOrDir.search("com_") != -1) {
+                    subsetId = fileOrDir;
+                    i = currentFileFilepathArray.length;
+                }
+                if (fileOrDir.search("mod_") != -1) {
+                    subsetId = fileOrDir;
+                    i = currentFileFilepathArray.length;
+                }
+            }
+            
+            console.log(subsetId);
             console.log('currentFileFilepath:');
             console.log(currentFileFilepath);
 			let searchResults = tovutilocalization.localizationTable[siteOrAdministrator][highlightedText] || [];
+            searchResults = searchResults.filter(result => {
+                return result.subsetId == null || result.subsetId == subsetId
+            });
 			console.log('search results: ');
 			console.log(searchResults);
 
@@ -78,7 +96,7 @@ async function activate(context) {
                     label: result.key,
                     detail: result.path
                 };
-            });
+            })
             quickPickItems.push(
                 { label: CREATE_NEW_VARIABLE_LABEL, detail: CREATE_NEW_VARIABLE_DETAIL },
             );

@@ -64,6 +64,15 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
         // Get the file extension, we only want to open .ini files
         // and if fileOrDirectory doesn't have an extension, it is a directory.
         var filepathArray = fileOrDirectory.split('.');
+        var subsetId = null;
+        filepathArray.forEach(fileOrDir => {
+            if (fileOrDir.search("com") != -1) {
+                subsetId = fileOrDir;
+            }
+            if (fileOrDir.search("mod") != -1) {
+                subsetId = fileOrDir;
+            }
+        });
         var fileExtension = filepathArray[filepathArray.length - 1];
         const aFileExistsThere = fs.lstatSync(completeFilepath).isFile();
         const itsExtensionIsDotIni = fileExtension == 'ini'
@@ -119,7 +128,8 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
                         
                         const localizationData = {
                             key: localizationKey,
-                            path: completeFilepath
+                            path: completeFilepath,
+                            subsetId
                         }
                         
                         localizationTable[siteOrAdministrator][value].push(localizationData);
