@@ -106,7 +106,7 @@ async function activate(context) {
                 let selectionReplacementText = "";
                 switch (selectedItem.label) {
                     case CREATE_NEW_VARIABLE_LABEL:
-                        console.log('create new var selected');
+                        console.log('create new sdfg selected');
                         // hide the current picker
                         picker.hide();
                         
@@ -115,19 +115,20 @@ async function activate(context) {
                             placeHolder: 'NEW_LOCALIZATION_VARIABLE',
                             prompt: 'Please enter a key value for the new localization variable',
                             ignoreFocusOut: true,
-                            validateInput: 
-                            (input) => 
-                                input.search(/([^A-Z0-9_])/g) != -1
+                            validateInput: (input) => {
+                                return input.search(/([^A-Z0-9_])/g) != -1
                                     ? "Only capitalized aphanumeric characters allowed, e.g. MY_LOCALIZATION_VARIABLE"
-                                    : null
+                                    : null;
+                            }
                             
                         });
-                        // console.log('userInput : ' + userInput);
+                        console.log('userInput : ' + userInput);
                         // @TODO make this filepath configurable
+                        console.log(currentWorkspace);
                         const localizationFilePath = 
-                            currentWorkspace 
-                            + siteOrAdministrator == "administrator" ? "/administrator" : ""
+                            currentWorkspace + (siteOrAdministrator == "administrator" ? "/administrator" : "")
                             + "/language/overrides/en-GB.override.ini";
+                        console.log(localizationFilePath);
                         tovutilocalization.createLocalizationVariable(userInput, highlightedText, localizationFilePath);
                     return;
                     case ADD_PHP_BRACKETS_LABEL:
