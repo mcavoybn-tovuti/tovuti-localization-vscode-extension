@@ -60,7 +60,15 @@ async function activate(context) {
 			console.log('highlighted text: ' + highlightedText);
 
 			// Index into the hash table based on the value of the localization variable
-			let searchResults = tovutilocalization.localizationTable[highlightedText] || [];
+            let currentFileFilepath = editor.document.uri.path;
+            let siteOrAdministrator = 'site';
+            if (currentFileFilepath.search('administrator') != -1) {
+                // Currently open file is in the administrator section
+                siteOrAdministrator = 'administrator';
+            }
+            console.log('currentFileFilepath:');
+            console.log(currentFileFilepath);
+			let searchResults = tovutilocalization.localizationTable[siteOrAdministrator][highlightedText] || [];
 			console.log('search results: ');
 			console.log(searchResults);
 
@@ -116,7 +124,10 @@ async function activate(context) {
                         });
                         // console.log('userInput : ' + userInput);
                         // @TODO make this filepath configurable
-                        const localizationFilePath = currentWorkspace + "/language/overrides/en-GB.override.ini";
+                        const localizationFilePath = 
+                            currentWorkspace 
+                            + siteOrAdministrator == "administrator" ? "/administrator" : ""
+                            + "/language/overrides/en-GB.override.ini";
                         tovutilocalization.createLocalizationVariable(userInput, highlightedText, localizationFilePath);
                     return;
                     case ADD_PHP_BRACKETS_LABEL:

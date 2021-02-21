@@ -2,7 +2,10 @@
 var fs = require('fs');
 
 
-let localizationTable = {};
+let localizationTable = {
+    site: {},
+    administrator: {}
+};
 /**
  * 
  * If there is a variable:
@@ -40,6 +43,11 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
             : fs.readdirSync(directory);
     // console.log('folderList:');
     // console.log(folderList);
+
+    let siteOrAdministrator = "site";
+    if (directory.search('administrator') != -1) {
+        siteOrAdministrator = "administrator";
+    }
 
     folderList.forEach(async fileOrDirectory => {
         // If fileOrDirectory is the same as the directory parameter
@@ -83,15 +91,16 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
                 // If we are updating varaibles after a file has been changed
                 if (removeExisting) {
                     // Remove each entry in localizationTable from this file
-                    Object.keys(localizationTable).forEach(key  => {
-                        localizationTable[key] = localizationTable[key].filter(entry => {
+                    // console.log('removing existing keys from that file');
+                    Object.keys(localizationTable[siteOrAdministrator]).forEach(key  => {
+                        localizationTable[siteOrAdministrator][key] = localizationTable[siteOrAdministrator][key].filter(entry => {
                             return entry.path != fileOrDirectory;
                         })
                     })
                 }
 
                 // Cycle through each line of the file
-                data.split("\n").forEach(line => {
+                data.split("\n").forEach(async line => {
                     const lineHasVariable = line.split('=').length == 2;
                     const isNotAComment = line.slice(0, 1) != ';';
                     if (lineHasVariable && isNotAComment){
@@ -103,16 +112,17 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
                         // @TODO get rid of this annoying warning suppression
                         // The value of the localization variable with the given key, e.g. "Pay"
                         const value = line.split('=')[1].replaceAll('"', '').trim();
-                        
-                        if (!localizationTable[value]) {
-                            localizationTable[value] = [];
+
+                        if (!localizationTable[siteOrAdministrator][value]) {
+                            localizationTable[siteOrAdministrator][value] = [];
                         }
+                        
                         const localizationData = {
                             key: localizationKey,
                             path: completeFilepath
                         }
                         
-                        localizationTable[value].push(localizationData);
+                        localizationTable[siteOrAdministrator][value].push(localizationData);
                     }
                 })
             });
@@ -139,10 +149,15 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
 function createLocalizationVariable(key, value, filepath) {
     // Write a new localization variable to the file at filepath
     const newVariableText = `${key.toUpperCase()} = "${value}"\n`;
-    if (!localizationTable[value]) {
-        localizationTable[value] = [];
+    let siteOrAdministrator = "site";
+    if (filepath.search('administrator') != -1) {
+        siteOrAdministrator = "administrator";
     }
-    localizationTable[value].push({
+
+    if (!localizationTable[siteOrAdministrator][value]) {
+        localizationTable[siteOrAdministrator][value] = [];
+    }
+    localizationTable[siteOrAdministrator][value].push({
         key,
         path: filepath
     });
