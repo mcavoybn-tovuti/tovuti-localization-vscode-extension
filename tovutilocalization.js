@@ -6,6 +6,8 @@ let localizationTable = {
     site: {},
     administrator: {}
 };
+
+let localizationTableByVariable = {};
 /**
  * 
  * If there is a variable:
@@ -24,7 +26,7 @@ let localizationTable = {
  * @param {string} directory the directory to traverse
  * 
  */
-async function initializeLocalizationTable(directory, removeExisting = false) {
+function initializeLocalizationTable(directory, removeExisting = false) {
     // console.log('starting traversal from directory : ' + directory);
 
     if (!fs.existsSync(directory)) {
@@ -88,25 +90,12 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
 
             // Open the file 
             // console.log(`attempting to open file at ${completeFilepath}`);
-            await fs.readFile(completeFilepath, 'utf8', (error, data) => {
-
-                if (error) {
-                    console.log(`error opening file ${completeFilepath}`);
-                    console.log(`${error}`);
-                    return;
-                }
+            let data = fs.readFileSync(completeFilepath, {encoding: 'utf8'});
+            if (!data){
+                console.log(`error opening file ${completeFilepath}`);
+                console.log(`${data}`);
+            } else {
                 // console.log('file opened successfully.');
-
-                // If we are updating varaibles after a file has been changed
-                if (removeExisting) {
-                    // Remove each entry in localizationTable from this file
-                    // console.log('removing existing keys from that file');
-                    Object.keys(localizationTable[siteOrAdministrator]).forEach(key  => {
-                        localizationTable[siteOrAdministrator][key] = localizationTable[siteOrAdministrator][key].filter(entry => {
-                            return entry.path != fileOrDirectory;
-                        })
-                    })
-                }
 
                 // Cycle through each line of the file
                 data.split("\n").forEach(async line => {
@@ -133,25 +122,15 @@ async function initializeLocalizationTable(directory, removeExisting = false) {
                         }
                         
                         localizationTable[siteOrAdministrator][value].push(localizationData);
+                        localizationTableByVariable[localizationKey] = value;
                     }
-                })
-            });
+                });
+            }
 
-            // @TODO Put a watch on the file so the localizationTable
-            // is updated if a variable is added or removed
-            fs.watch(completeFilepath, (event, filename) => {
-                // console.log(event);
-                // console.log(filename);
-                if (filename) {
-                    console.log(`${filename} changed, updating localizationTable`);
-                    initializeLocalizationTable(completeFilepath, true);
-                }
-            });
-            
             return;
         } else if (filepathArray.length == 1) {
             // Recurse into directory
-            return await initializeLocalizationTable(completeFilepath + '/', false);
+            return initializeLocalizationTable(completeFilepath + '/', false);
         }
     });
 }
@@ -181,6 +160,7 @@ function createLocalizationVariable(key, value, filepath) {
 
 module.exports = {
     localizationTable,
+    localizationTableByVariable,
     initializeLocalizationTable,
     createLocalizationVariable
 }

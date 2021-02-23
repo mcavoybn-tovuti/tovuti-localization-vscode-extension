@@ -13,82 +13,65 @@ const ADD_PHP_BRACKETS_DETAIL = "Adds <?php ?> around the currently selected tex
 const TOGGLE_QUOTE_TYPE_LABEL = "Toggle Quote Type";
 const TOGGLE_QUOTE_TYPE_DETAIL = "Swaps double quotes for single quotes (and vice versa). If more than one type of quotes are found, convert single to double.";
 
+const REPLACE_JTEXT_LABEL = "Replace JText";
+const REPLACE_JTEXT_DETAIL = "Converts a JText to AxsLanguage::text";
+
+const REMOVE_SURROUNDING_QUOTATIONS_LABEL = "Surrounding quotations remove";
+const REMOVE_SURROUNDING_QUOTATIONS_DETAIL = "Removes single or double quotations around the current selection, if they exist"
+
+const currentWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri.path.slice(1);
+
 /**
  * This function is called when the extension is activated
  * 
  * @param {vscode.ExtensionContext} context
  */
-async function activate(context) {
-
-	// @TODO: add a config option for users to specify a custom search directory in case they don't want
-	// to search the current workspace for the language folders.
-	// const configuredDirectory = vscode.workspace.getConfiguration('tovutilocalization.searchDirectory');
-	// console.log(configuredDirectory);
+function activate(context) {
 
 	// Initialize localization hash table based on current workspace folder
-	const currentWorkspace = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0].uri.path.slice(1);
-	if (currentWorkspace) {
-		// console.log('Workspace found: ' + currentWorkspace);
-
-		// @TODO make this blocking code. These awaits aren't doing the trick yet
-		// First call to tovutilocalization.findLocalizationVariable fails every time
-		await tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/en-GB/", false)
-        await tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/overrides/", false)
-		await tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/en-GB/", false);
-        await tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/overrides/", false)
-	} else {
-		console.log("Tovuti Localizaton extension failed to activate, root folder not found");
-		return;
-	}
-	console.log('Localization table initialization successful');
-	console.log(tovutilocalization.localizationTable)
-
+    initializeLocalizationTable();
 
 	// The command has been defined in the package.json file
 	// Now we provide the implementation of the command with  registerCommand
 	// The commandId parameter must match the command field in package.json
 	// The code placed here will be executed every time the tovutilocalization.findLocalizationVariable command is executed
 	let disposable = vscode.commands.registerCommand('tovutilocalization.findLocalizationVariable', async () => {
-
+        
 		// If there is an open editor
 		let editor = vscode.window.activeTextEditor;
 		if (editor) {
-			// Retrieve the currently highlighed text
-			let selectionStart = editor.selection.start;
-			let selectionEnd = editor.selection.end;
-			let highlightedText = editor.document.getText(new vscode.Range(selectionStart, selectionEnd));
+
+			// Get the currently highlighed text			
+            const highlightedText = getHighlightedText(editor);
 			console.log('highlighted text: ' + highlightedText);
 
-			// Index into the hash table based on the value of the localization variable
-            let currentFileFilepath = editor.document.uri.path;
-            let siteOrAdministrator = 'site';
-            if (currentFileFilepath.search('administrator') != -1) {
-                // Currently open file is in the administrator section
-                siteOrAdministrator = 'administrator';
-            }
+			// Check for the string 'administrator' in the filepath of the active file in the editor
+            let openedFile = editor.document.uri;
+            let isAdminSection = openedFile.path.search('administrator') == -1;
+
+            // Check for any directories in the filepath with a com_ or mod_ prefix
             let subsetId = null;
-            let currentFileFilepathArray = currentFileFilepath.split("/");
-            for (let i = 0; i < currentFileFilepathArray.length; i++) {
-                let fileOrDir = currentFileFilepathArray[i];
+            let filepathArr = openedFile.path.split("/");
+            for (let i = 0; i < filepathArr.length; i++) {
+                let fileOrDir = filepathArr[i];
                 if (fileOrDir.search("com_") != -1) {
                     subsetId = fileOrDir;
-                    i = currentFileFilepathArray.length;
+                    i = filepathArr.length;
                 }
                 if (fileOrDir.search("mod_") != -1) {
                     subsetId = fileOrDir;
-                    i = currentFileFilepathArray.length;
+                    i = filepathArr.length;
                 }
             }
-            
-            console.log(subsetId);
-            console.log('currentFileFilepath:');
-            console.log(currentFileFilepath);
-			let searchResults = tovutilocalization.localizationTable[siteOrAdministrator][highlightedText] || [];
+
+            // Search for the localization variable
+			let searchResults = tovutilocalization.localizationTable[isAdminSection ? 'administrator' : 'site'][highlightedText] || [];
+            // If we are in a module or component, filter out any variables not in the subset
             searchResults = searchResults.filter(result => {
                 return result.subsetId == null || result.subsetId == subsetId
             });
-			console.log('search results: ');
-			console.log(searchResults);
+			// console.log('search results: ');
+			// console.log(searchResults);
 
             // Populate autocomplete dropdown (vscode quickpick) options
             let quickPickItems = searchResults.map(result => {
@@ -106,6 +89,12 @@ async function activate(context) {
             quickPickItems.push(
                 { label: TOGGLE_QUOTE_TYPE_LABEL, detail: TOGGLE_QUOTE_TYPE_DETAIL },
             );
+            quickPickItems.push(
+                { label: REPLACE_JTEXT_LABEL, detail: REPLACE_JTEXT_DETAIL },
+            );
+            quickPickItems.push(
+                { label: REMOVE_SURROUNDING_QUOTATIONS_LABEL, detail: REMOVE_SURROUNDING_QUOTATIONS_DETAIL },
+            );
 
             let picker = vscode.window.createQuickPick();
             picker.title = "Tovuti Localization Utility";
@@ -116,15 +105,12 @@ async function activate(context) {
             picker.items = quickPickItems;
 
             picker.onDidChangeSelection(async items => {
-                // console.log('onDidChangeSelection');
-                // console.log(items);
-
                 // There will only ever be one selected item since .canSelectMany = false
                 const selectedItem = items[0];
+                console.log(selectedItem);
                 let selectionReplacementText = "";
                 switch (selectedItem.label) {
                     case CREATE_NEW_VARIABLE_LABEL:
-                        console.log('create new sdfg selected');
                         // hide the current picker
                         picker.hide();
                         
@@ -138,15 +124,12 @@ async function activate(context) {
                                     ? "Only capitalized aphanumeric characters allowed, e.g. MY_LOCALIZATION_VARIABLE"
                                     : null;
                             }
-                            
                         });
-                        console.log('userInput : ' + userInput);
+
                         // @TODO make this filepath configurable
-                        console.log(currentWorkspace);
                         const localizationFilePath = 
-                            currentWorkspace + (siteOrAdministrator == "administrator" ? "/administrator" : "")
+                            currentWorkspace + (isAdminSection ? "/administrator" : "")
                             + "/language/overrides/en-GB.override.ini";
-                        console.log(localizationFilePath);
                         tovutilocalization.createLocalizationVariable(userInput, highlightedText, localizationFilePath);
                     return;
                     case ADD_PHP_BRACKETS_LABEL:
@@ -165,6 +148,26 @@ async function activate(context) {
                             selectionReplacementText = highlightedText.replaceAll(`'`, `"`);
                         }
                     break;
+                    case REPLACE_JTEXT_LABEL:
+                        let variable = highlightedText.split(`"`)[1];
+                        if (!variable) {
+                            variable = highlightedText.split(`'`)[1];
+                        }
+                        let value = tovutilocalization.localizationTableByVariable[variable];
+                        selectionReplacementText = `AxsLanguage::text("${variable}", "${value}")`;
+                    break;
+                    case REMOVE_SURROUNDING_QUOTATIONS_LABEL:
+                        let start = editor.selection.start.translate(0, -1);
+                        let end = editor.selection.end.translate(0, 1);
+                        let text = editor.document.getText(new vscode.Range(start, end));
+                        console.log(text);
+                        text = text.replaceAll(`"`, ``).replaceAll(`'`, ``);
+                        let newSelection = new vscode.Selection(start, end);
+                        vscode.window.activeTextEditor.edit(editBuilder => {
+                            editBuilder.replace(newSelection, text);
+                        });
+                        picker.hide();
+                    return;
                     default:
                         // Selected item is a localization variable
                         selectionReplacementText = `AxsLanguage::text("${selectedItem.label}", "${highlightedText}")`;
@@ -182,6 +185,32 @@ async function activate(context) {
 	});
 
 	context.subscriptions.push(disposable);
+}
+
+async function initializeLocalizationTable() {
+    if (currentWorkspace) {
+		tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/en-GB/", false)
+        tovutilocalization.initializeLocalizationTable(currentWorkspace + "/language/overrides/en-GB.override.ini", false)
+		tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/en-GB/", false);
+        tovutilocalization.initializeLocalizationTable(currentWorkspace + "/administrator/language/overrides/en-GB.override.ini", false)
+	} else {
+		console.log("Tovuti Localizaton extension failed to activate, open workspace folder not found");
+		return;
+	}
+	console.log('Localization table initialization successful');
+	console.log(tovutilocalization.localizationTable)
+    return;
+}
+
+/**
+ * 
+ * @param {vscode.TextEditor} editor 
+ */
+function getHighlightedText(editor) {
+    let selectionStart = editor.selection.start;
+    let selectionEnd = editor.selection.end;
+    let highlightedText = editor.document.getText(new vscode.Range(selectionStart, selectionEnd));
+    return highlightedText;
 }
 
 // This method is called when this extension is deactivated.
