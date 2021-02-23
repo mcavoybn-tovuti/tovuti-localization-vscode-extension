@@ -47,7 +47,7 @@ function activate(context) {
 
 			// Check for the string 'administrator' in the filepath of the active file in the editor
             let openedFile = editor.document.uri;
-            let isAdminSection = openedFile.path.search('administrator') == -1;
+            let isAdminSection = openedFile.path.search('administrator') != -1;
 
             // Check for any directories in the filepath with a com_ or mod_ prefix
             let subsetId = null;
@@ -153,15 +153,19 @@ function activate(context) {
                         if (!variable) {
                             variable = highlightedText.split(`'`)[1];
                         }
-                        let value = tovutilocalization.localizationTableByVariable[variable];
+                        let value = tovutilocalization.localizationTableByVariable[isAdminSection ? "administrator" : "site"][variable];
                         selectionReplacementText = `AxsLanguage::text("${variable}", "${value}")`;
                     break;
                     case REMOVE_SURROUNDING_QUOTATIONS_LABEL:
                         let start = editor.selection.start.translate(0, -1);
                         let end = editor.selection.end.translate(0, 1);
                         let text = editor.document.getText(new vscode.Range(start, end));
-                        console.log(text);
-                        text = text.replaceAll(`"`, ``).replaceAll(`'`, ``);
+                        if (text.slice(0, 1) == `"` || text.slice(0, 1) == `'`) {
+                            text = text.slice(1);
+                        }
+                        if (text.slice(text.length-1, text.length) == `"` || text.slice(text.length-1, text.length) == `'`) {
+                            text = text.slice(0, text.length-1);
+                        }
                         let newSelection = new vscode.Selection(start, end);
                         vscode.window.activeTextEditor.edit(editBuilder => {
                             editBuilder.replace(newSelection, text);

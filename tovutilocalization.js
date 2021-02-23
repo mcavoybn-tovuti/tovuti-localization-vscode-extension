@@ -7,7 +7,10 @@ let localizationTable = {
     administrator: {}
 };
 
-let localizationTableByVariable = {};
+let localizationTableByVariable = {
+    site: {},
+    administrator: {}
+};
 /**
  * 
  * If there is a variable:
@@ -122,7 +125,7 @@ function initializeLocalizationTable(directory, removeExisting = false) {
                         }
                         
                         localizationTable[siteOrAdministrator][value].push(localizationData);
-                        localizationTableByVariable[localizationKey] = value;
+                        localizationTableByVariable[siteOrAdministrator][localizationKey] = value;
                     }
                 });
             }
